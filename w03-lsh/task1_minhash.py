@@ -30,7 +30,10 @@ BOOK_HASHES = [lambda r: (r + 1) % 5, lambda r: (3 * r + 1) % 5]
 
 def jaccard(a, b):
     """|a and b| / |a or b|. Empty union is 0, not an error."""
-    raise NotImplementedError("jaccard similarity")
+    if len(a | b) == 0:
+        return 0
+    else:
+        return len(a & b) / len(a | b)
 
 
 def minhash_signatures(columns, hashes, n_rows):
@@ -48,7 +51,16 @@ def minhash_signatures(columns, hashes, n_rows):
     written something correct that does not survive a dataset that does not fit
     in memory, and not fitting in memory is what this course is about.
     """
-    raise NotImplementedError("signature matrix")
+    # One signature per document, with one minimum per hash function.
+    signatures = [[float("inf")] * len(hashes) for _ in columns]
+
+    for r in range(n_rows):  # Visit each row only once.
+        for c, column in enumerate(columns):
+            if r in column:  # This document contains row r.
+                for h, hash_fn in enumerate(hashes):
+                    signatures[c][h] = min(signatures[c][h], hash_fn(r))
+
+    return signatures
 
 
 def lsh_candidates(signatures, bands):
@@ -57,10 +69,38 @@ def lsh_candidates(signatures, bands):
     Two columns are candidates if they land in the same bucket for **at least
     one** band. Return {(i, j), ...} with i < j.
 
-    The signature length must divide evenly by `bands`, or you have to decide
-    what to do with the remainder. Say what you decided.
+    The signature length must divide evenly by `bands`. Otherwise, raise a
+    ValueError rather than creating bands of different sizes.
     """
-    raise NotImplementedError("LSH candidate pairs")
+    if bands <= 0:
+        raise ValueError("bands must be positive")
+    if not signatures:
+        return set()
+
+    length = len(signatures[0])
+    for signature in signatures:
+        if len(signature) != length:
+            raise ValueError("all signatures must have the same length")
+    if length == 0 or length % bands != 0:
+        raise ValueError("signature length must be divisible by bands")
+
+    rows_per_band = length // bands
+    candidates = set()
+
+    for band in range(bands):
+        buckets = {}  # Start new groups for this band
+        start = band * rows_per_band
+        end = start + rows_per_band
+
+        for i, signature in enumerate(signatures):
+            key = tuple(signature[start:end])  # Values in this band
+            if key not in buckets:
+                buckets[key] = []
+            for j in buckets[key]:
+                candidates.add((j, i))  # j was seen before i
+            buckets[key].append(i)
+
+    return candidates
 
 
 # ------------------------------------------------------------------- harness

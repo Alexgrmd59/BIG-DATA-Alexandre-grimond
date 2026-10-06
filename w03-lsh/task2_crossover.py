@@ -16,7 +16,7 @@ from Task 1 and Task 3.
 
 Write down where it hurts. That is the deliverable.
 """
-import argparse, json, os, platform, time, tracemalloc
+import argparse, json, os, platform, random, time, tracemalloc
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
@@ -41,6 +41,27 @@ def timed(fn, *args):
     return result, elapsed, peak
 
 
+def build_docs(n):
+    """Build exactly n documents with the same settings as the benchmark."""
+    import bench
+
+    rng = random.Random(bench.SEED)
+    planted = round(n * bench.PLANTED / (bench.N_DOCS + bench.PLANTED))
+    base_count = n - planted
+    docs = [set(rng.sample(range(bench.VOCAB), bench.SHINGLES))
+            for _ in range(base_count)]
+
+    for _ in range(planted):
+        clone = set(docs[rng.randrange(base_count)])
+        for _ in range(rng.randint(4, 14)):
+            clone.discard(rng.choice(list(clone)))
+            clone.add(rng.randrange(bench.VOCAB))
+        docs.append(clone)
+
+    rng.shuffle(docs)
+    return docs
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--sizes", default="250,500,1000,2000",
@@ -58,7 +79,10 @@ def main():
 
     rows = []
     for n in [int(x) for x in a.sizes.split(",")]:
-        docs = bench.build()[:n]
+        if n <= 0:
+            p.error("all sizes must be positive")
+        docs = build_docs(n)
+        assert len(docs) == n
         sim = bench.Counter()
         _, t_brute, m_brute = timed(BruteForce(a.threshold).find, docs, sim)
         c_brute = sim.calls

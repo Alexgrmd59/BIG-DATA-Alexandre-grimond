@@ -16,6 +16,9 @@ The harness counts every call you make to `similarity()`. That is your score.
 It also checks **recall** - which of the truly similar pairs you found. Skipping
 comparisons is easy; skipping comparisons without losing the pairs is the task.
 """
+import random
+
+from task1_minhash import lsh_candidates
 
 
 class BruteForce:
@@ -61,7 +64,33 @@ class YourFinder:
     """
 
     def __init__(self, threshold):
-        raise NotImplementedError("write your finder")
+        self.threshold = threshold
+        self.n_hashes = 60
+        self.bands = 20
 
     def find(self, docs, similarity):
-        raise NotImplementedError
+        if len(docs) < 2:
+            return set()
+
+        rng = random.Random(817)  # Keep the hash functions reproducible.
+        prime = 2_147_483_647
+        hash_params = [
+            (rng.randrange(1, prime), rng.randrange(prime))
+            for _ in range(self.n_hashes)
+        ]
+
+        signatures = []
+        for doc in docs:
+            signature = []
+            for a, b in hash_params:
+                # Keep the smallest hashed shingle for each hash function.
+                signature.append(min(((a * x + b) % prime for x in doc),
+                                     default=float("inf")))
+            signatures.append(signature)
+
+        candidates = lsh_candidates(signatures, self.bands)
+        found = set()
+        for i, j in candidates:
+            if similarity(docs[i], docs[j]) >= self.threshold:
+                found.add((i, j))
+        return found
