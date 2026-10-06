@@ -14,7 +14,6 @@ At 4,000 documents, brute force took 91.33 s, so time was the first limit. The s
 
 ## Task 3
 
-I chose 60 hashes and 20 bands, which makes 3 rows per band. The S-curve step is `(1/20)^(1/3) = 0.368`, below the 0.6 similarity threshold. This should help catch real pairs: at similarity 0.6, `1 - (1 - 0.6^3)^20 = 0.992` is the theoretical chance of becoming a candidate.
-With this setting, the benchmark found all 121 true pairs using 200 similarity calls instead of 2,246,140. That is 99.99% fewer comparisons.
-I also tried 10 bands of 6 rows. The step moved to `(1/10)^(1/6) = 0.681`, and the candidate chance at 0.6 dropped to 0.380. Calls dropped to 102, but I found only 102 of the 121 true pairs (84.3% recall), below the required 90%.
-The score counts similarity calls but not the time to build signatures. With a much larger vocabulary or more hash functions, that work could become a real part of the cost.
+I used 60 hashes and 20 bands (3 rows each). The step is `(1/20)^(1/3) = 0.368`, below the 0.6 threshold; at similarity 0.6, `1 - (1 - 0.6^3)^20 = 0.992` is the chance of becoming a candidate.
+The benchmark found all 121 true pairs with 200 similarity calls instead of 2,246,140, so 99.99% fewer comparisons.
+With 10 bands (6 rows), the step rose to 0.681 and the candidate chance at 0.6 fell to 0.380. Recall dropped to 102/121 = 84.3% with 102 calls. The score ignores the time to build signatures, which could matter with larger data.
