@@ -18,6 +18,7 @@ better score by occasionally forgetting something it was given has not improved
 anything, it has broken the contract.
 """
 import hashlib
+import sys
 
 
 class NaiveFilter:
@@ -64,14 +65,37 @@ class YourFilter:
     observation.md asks.
     """
 
+    __slots__ = ("seed", "bits")  # Avoid an extra per-object dictionary.
+    HASH_COUNT = 7  # Best integer near (80,000 / 8,000) * ln(2).
+
     def __init__(self, n_bits, seed=246):
-        raise NotImplementedError("write your filter")
+        self.seed = seed
+        fixed_bytes = (sys.getsizeof(self) + sys.getsizeof(self.seed)
+                       + sys.getsizeof(bytearray()))
+        byte_count = n_bits // 8 - fixed_bytes - 1
+        if byte_count < 1:
+            raise ValueError("the bit budget is too small")
+        self.bits = bytearray(byte_count)  # Leave room for Python object overhead.
+
+    def _positions(self, item):
+        """Compute seven bit positions for one item."""
+        bit_count = len(self.bits) * 8
+        for i in range(self.HASH_COUNT):
+            data = f"{self.seed}:{i}:{item}".encode("utf-8")
+            digest = hashlib.blake2b(data, digest_size=8).digest()
+            yield int.from_bytes(digest, "big") % bit_count
 
     def add(self, item):
-        raise NotImplementedError
+        for position in self._positions(item):
+            self.bits[position // 8] |= 1 << (position % 8)
 
     def __contains__(self, item):
-        raise NotImplementedError
+        for position in self._positions(item):
+            if not self.bits[position // 8] & (1 << (position % 8)):
+                return False
+        return True
 
     def memory_bits(self):
-        raise NotImplementedError
+        # Count the bit array and all persistent instance data.
+        return 8 * (sys.getsizeof(self) + sys.getsizeof(self.seed)
+                    + sys.getsizeof(self.bits))

@@ -13,7 +13,12 @@ approximating.
 
     python3 task1_sketches.py --verify
 """
-import argparse, random
+import argparse
+import hashlib
+import math
+import random
+import statistics
+import struct
 
 
 class BloomFilter:
@@ -28,13 +33,31 @@ class BloomFilter:
     """
 
     def __init__(self, m, k, seed=246):
-        raise NotImplementedError("write the Bloom filter")
+        self.m = m
+        self.k = k
+        self.seed = seed
+        self.bits = bytearray((m + 7) // 8)  # Pack 8 bits into each byte.
+
+    def _positions(self, item):
+        """Compute the k bit positions for one item."""
+        for i in range(self.k):
+            data = f"{self.seed}:{i}:{item}".encode("utf-8")
+            digest = hashlib.blake2b(data, digest_size=8).digest()
+            yield int.from_bytes(digest, "big") % self.m
 
     def add(self, item):
-        raise NotImplementedError
+        for position in self._positions(item):
+            byte_index = position // 8
+            bit = position % 8
+            self.bits[byte_index] |= 1 << bit  # Set this bit to 1.
 
     def __contains__(self, item):
-        raise NotImplementedError
+        for position in self._positions(item):
+            byte_index = position // 8
+            bit = position % 8
+            if not self.bits[byte_index] & (1 << bit):
+                return False
+        return True
 
     def expected_fp_rate(self, n_inserted):
         """The textbook's predicted false-positive rate after n insertions.
@@ -42,7 +65,7 @@ class BloomFilter:
         §4.4.2 derives it. Return the number, do not measure it - the harness
         measures separately and compares the two.
         """
-        raise NotImplementedError
+        return (1 - math.exp(-self.k * n_inserted / self.m)) ** self.k
 
 
 def flajolet_martin(stream, n_hashes=64, seed=246):
@@ -67,7 +90,34 @@ def flajolet_martin(stream, n_hashes=64, seed=246):
 
     Return your estimate as a float.
     """
-    raise NotImplementedError("write Flajolet-Martin")
+    if n_hashes < 1:
+        raise ValueError("n_hashes must be positive")
+
+    max_zeros = [0] * n_hashes  # One maximum per hash function.
+    seed_bytes = str(seed).encode("utf-8")
+    saw_item = False
+
+    for item in stream:
+        saw_item = True
+        data = seed_bytes + b":" + str(item).encode("utf-8")
+        hashes = hashlib.shake_256(data).digest(8 * n_hashes)
+
+        for i, (value,) in enumerate(struct.iter_unpack("<Q", hashes)):
+            # The lowest 1 bit reveals the number of trailing zeros.
+            zeros = (value & -value).bit_length() - 1 if value else 64
+            max_zeros[i] = max(max_zeros[i], zeros)
+
+    if not saw_item:
+        return 0.0
+
+    # Pair hashes, then take the median to limit extreme estimates.
+    group_size = 2
+    group_estimates = []
+    for start in range(0, n_hashes, group_size):
+        group = max_zeros[start:start + group_size]
+        group_estimates.append(statistics.mean(2 ** zeros for zeros in group))
+
+    return float(statistics.median(group_estimates))
 
 
 def reservoir_sample(stream, k, seed=246):
@@ -78,7 +128,21 @@ def reservoir_sample(stream, k, seed=246):
 
     Return a list of k items (or fewer if the stream was shorter).
     """
-    raise NotImplementedError("write reservoir sampling")
+    if k < 0:
+        raise ValueError("k must not be negative")
+
+    rng = random.Random(seed)
+    sample = []
+
+    for count, item in enumerate(stream, start=1):
+        if count <= k:
+            sample.append(item)  # Fill the first k slots.
+        else:
+            slot = rng.randrange(count)  # Pick among all items seen so far.
+            if slot < k:
+                sample[slot] = item
+
+    return sample
 
 
 # ------------------------------------------------------------------- harness

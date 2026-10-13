@@ -1,0 +1,55 @@
+{
+  "runs": [
+    {
+      "n": 100000,
+      "true_distinct": 36702,
+      "exact_s": 0.3179303000215441,
+      "exact_peak_bytes": 3925492,
+      "fm_estimate": 45056.0,
+      "fm_s": 28.807726999977604,
+      "fm_peak_bytes": 5249,
+      "fm_ratio": 1.2276170235954444
+    },
+    {
+      "n": 400000,
+      "true_distinct": 146970,
+      "exact_s": 1.2632153001613915,
+      "exact_peak_bytes": 11591190,
+      "fm_estimate": 180224.0,
+      "fm_s": 116.56956299999729,
+      "fm_peak_bytes": 5251,
+      "fm_ratio": 1.2262638633734775
+    },
+    {
+      "n": 1600000,
+      "true_distinct": 587625,
+      "exact_s": 4.914426199859008,
+      "exact_peak_bytes": 46647488,
+      "fm_estimate": 917504.0,
+      "fm_s": 498.3714757000562,
+      "fm_peak_bytes": 5251,
+      "fm_ratio": 1.561376728355669
+    },
+    {
+      "n": 200000,
+      "true_distinct": 73410,
+      "exact_s": 0.5707316000480205,
+      "exact_peak_bytes": 5760955,
+      "fm_estimate": 118784.0,
+      "fm_s": 58.147871899884194,
+      "fm_peak_bytes": 5249,
+      "fm_ratio": 1.6180901784498025
+    }
+  ],
+  "machine": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "AMD64 Family 26 Model 36 Stepping 0, AuthenticAMD",
+    "python": "3.14.3"
+  },
+  "stress_exact": {
+    "n": 25000000,
+    "true_distinct": 9179304,
+    "exact_s": 83.32288639992476,
+    "exact_peak_bytes": 744832256
+  }
+}
