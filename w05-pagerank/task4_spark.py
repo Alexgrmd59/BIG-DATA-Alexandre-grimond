@@ -48,6 +48,13 @@ def local_pagerank(edges, nodes, beta=0.85, iterations=10):
             graph[source].append(destination)
 
         # Match Spark's fixed number of iterations.
+        solver = YourPageRank(beta=beta, tol=0, max_iter=iterations)
+        ranks = solver.run(graph)
+        local_pagerank.peak_bytes = tracemalloc.get_traced_memory()[1]
+        return ranks
+    finally:
+        if started_tracing:
+            tracemalloc.stop()
 
 
 def spark_pagerank(edges, nodes, beta=0.85, iterations=10):
