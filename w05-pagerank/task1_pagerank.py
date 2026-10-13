@@ -41,7 +41,35 @@ def pagerank(graph, beta=0.85, iterations=100, tol=1e-10):
     you should call it converged. Return the ranks, and set `pagerank.iterations`
     to how many you actually used, because Task 2 measures that.
     """
-    raise NotImplementedError("implement PageRank")
+    if not graph:
+        pagerank.iterations = 0
+        return {}
+
+    n = len(graph)
+    ranks = {node: 1.0 / n for node in graph}
+    pagerank.iterations = 0
+
+    for turn in range(1, iterations + 1):
+        # Every page receives the same teleport share.
+        next_ranks = {node: (1.0 - beta) / n for node in graph}
+        for node, out_links in graph.items():
+            if out_links:
+                share = beta * ranks[node] / len(out_links)
+                for destination in out_links:
+                    next_ranks[destination] += share
+            else:
+                # A dead end sends its remaining share to every page.
+                share = beta * ranks[node] / n
+                for destination in graph:
+                    next_ranks[destination] += share
+
+        change = sum(abs(next_ranks[node] - ranks[node]) for node in graph)
+        ranks = next_ranks
+        pagerank.iterations = turn
+        if change < tol:
+            break
+
+    return ranks
 
 
 def pagerank_no_teleport(graph, iterations=100):
@@ -50,7 +78,21 @@ def pagerank_no_teleport(graph, iterations=100):
     It exists so you can watch both failures happen rather than take them on
     trust. The harness checks that it really does fail.
     """
-    raise NotImplementedError("implement the broken version")
+    if not graph:
+        return {}
+
+    ranks = {node: 1.0 / len(graph) for node in graph}
+    for _ in range(iterations):
+        next_ranks = {node: 0.0 for node in graph}
+        for node, out_links in graph.items():
+            if not out_links:
+                continue  # A dead end passes its rank to nobody.
+            share = ranks[node] / len(out_links)
+            for destination in out_links:
+                next_ranks[destination] += share
+        ranks = next_ranks
+
+    return ranks
 
 
 # ------------------------------------------------------------------- harness

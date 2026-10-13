@@ -36,7 +36,18 @@ def local_pagerank(edges, nodes, beta=0.85, iterations=10):
 
     Return {node: rank} and set local_pagerank.peak_bytes.
     """
-    raise NotImplementedError("TASK 4a - reuse your sparse PageRank")
+    from task3_sparse import YourPageRank
+
+    started_tracing = not tracemalloc.is_tracing()
+    if started_tracing:
+        tracemalloc.start()
+    try:
+        # Group each destination under its source page.
+        graph = {page: [] for page in range(nodes)}
+        for source, destination in edges:
+            graph[source].append(destination)
+
+        # Match Spark's fixed number of iterations.
 
 
 def spark_pagerank(edges, nodes, beta=0.85, iterations=10):

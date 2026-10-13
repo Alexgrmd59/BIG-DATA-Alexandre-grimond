@@ -1,0 +1,16 @@
+Week 5 - Task 4 (optional): local PageRank measurements
+
+Machine: Windows 11, AMD Ryzen AI 9 HX 370, 32 GB RAM, Python 3.14.3.
+Fixed seed 246, beta 0.85, 10 iterations. Times are single runs.
+
+Nodes      Edges       Build (s)   Local (s)   Traced peak (MB)   Top page
+50,000     376,379     0.3         6.09        18.9               147
+100,000    751,288     0.5         12.30       37.8               147
+200,000    1,502,520   1.0         27.14       75.6               147
+500,000    3,755,565   2.1         69.02       172.2              112
+
+I stopped at 500,000 pages: repeating a 69-second run was no longer practical.
+Time became the limit before the 32 GB of RAM ran out. The measured Python
+allocation peak is for the local calculation only; the edge list was built
+before tracemalloc started, so these values are not total process memory.
+

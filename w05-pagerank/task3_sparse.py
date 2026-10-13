@@ -86,10 +86,44 @@ class YourPageRank:
     """
 
     def __init__(self, beta=0.85, tol=1e-10, max_iter=100):
-        raise NotImplementedError("write your PageRank")
+        self.beta = beta
+        self.tol = tol
+        self.max_iter = max_iter
+        self.iterations = 0
+        self._peak_floats = 0
 
     def run(self, graph):
-        raise NotImplementedError
+        n = len(graph)
+        if not n:
+            self.iterations = 0
+            self._peak_floats = 0
+            return {}
+
+        ranks = {node: 1.0 / n for node in graph}
+        self._peak_floats = n + 3
+        self.iterations = 0
+
+        for turn in range(1, self.max_iter + 1):
+            # All dead ends share their rank evenly with every page.
+            dead_end_rank = sum(ranks[node] for node, links in graph.items() if not links)
+            base = (1.0 - self.beta + self.beta * dead_end_rank) / n
+            next_ranks = {node: base for node in graph}
+            self._peak_floats = 2 * n + 6
+
+            # Only visit links that actually exist in the graph.
+            for node, links in graph.items():
+                if links:
+                    share = self.beta * ranks[node] / len(links)
+                    for destination in links:
+                        next_ranks[destination] += share
+
+            change = sum(abs(next_ranks[node] - ranks[node]) for node in graph)
+            ranks = next_ranks
+            self.iterations = turn
+            if change < self.tol:
+                break
+
+        return ranks
 
     def memory_floats(self):
-        raise NotImplementedError
+        return self._peak_floats
