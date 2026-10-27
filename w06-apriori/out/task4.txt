@@ -1,0 +1,20 @@
+Week 6 - Task 4 (optional): local SON
+
+Fixed-seed data: 20,000 baskets, 2,000 items, support 50.
+Each chunk uses ceil(50 * chunk_size / 20,000) as its local support.
+
+Chunks   Baseline (s)   Local SON (s)   Candidates   Final pairs   Missing   Extra
+4        2.42           2.37            9,876        6,397         0         0
+8        1.96           2.78           14,201        6,397         0         0
+16       2.11           2.42           24,418        6,397         0         0
+
+More chunks produce more local candidates, but the final answer stays the same.
+If a globally frequent pair were below the scaled threshold in every chunk,
+adding its chunk counts would give less than 50 overall, a contradiction.
+Pass two checks only candidate pairs among the pairs actually seen in each
+basket. This avoids testing all 14,201 candidates against all 20,000 baskets.
+
+SON adds overhead on this single laptop. Its value is that chunks can be
+processed separately when all baskets will not fit on one machine.
+The supplied Spark comparison was attempted but could not start:
+ModuleNotFoundError (PySpark is not installed, and Java is unavailable).

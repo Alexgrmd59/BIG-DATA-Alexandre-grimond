@@ -14,6 +14,7 @@ smaller second pass, and the whole chapter is consequences of that trade.
     python3 task1_apriori.py --verify
 """
 import argparse
+from collections import Counter
 from itertools import combinations
 
 # Small enough to check by hand. support threshold 3 unless stated.
@@ -30,7 +31,10 @@ BASKETS = [
 
 def frequent_singletons(baskets, support):
     """Items appearing in at least `support` baskets. Return {item: count}."""
-    raise NotImplementedError("pass one")
+    counts = Counter()
+    for basket in baskets:
+        counts.update(basket)
+    return {item: count for item, count in counts.items() if count >= support}
 
 
 def frequent_pairs(baskets, support):
@@ -44,7 +48,14 @@ def frequent_pairs(baskets, support):
     A-Priori exists to avoid, and it will pass this harness while failing the
     point. Task 3 measures whether you actually did it.
     """
-    raise NotImplementedError("pass two")
+    frequent = set(frequent_singletons(baskets, support))
+    counts = Counter()
+    for basket in baskets:
+        # Only frequent items can form a frequent pair.
+        for pair in combinations(sorted(basket & frequent), 2):
+            counts[pair] += 1
+    return {frozenset(pair): count for pair, count in counts.items()
+            if count >= support}
 
 
 def association_rules(baskets, support, min_confidence):
@@ -60,7 +71,19 @@ def association_rules(baskets, support, min_confidence):
     rule with high confidence and lift near 1 tells you nothing - the consequent
     was common anyway - and §6.1.3 is about why that matters more than it looks.
     """
-    raise NotImplementedError("rules")
+    singles = frequent_singletons(baskets, support)
+    pairs = frequent_pairs(baskets, support)
+    total = len(baskets)
+    rules = []
+    for pair, pair_count in pairs.items():
+        first, second = sorted(pair)
+        for antecedent, consequent in ((first, second), (second, first)):
+            confidence = pair_count / singles[antecedent]
+            if confidence >= min_confidence:
+                # Lift compares the rule with the consequent's usual frequency.
+                lift = confidence / (singles[consequent] / total)
+                rules.append((antecedent, consequent, confidence, lift))
+    return sorted(rules, key=lambda rule: -rule[2])
 
 
 # ------------------------------------------------------------------- harness

@@ -18,6 +18,8 @@ Proving that to yourself is worth more than the code.
 Optional. Not part of the assignment.
 """
 import argparse, time
+import math
+from collections import Counter
 from itertools import combinations
 
 
@@ -34,7 +36,16 @@ def son_pass_one(chunks, support, total_baskets):
 
     TASK 4a
     """
-    raise NotImplementedError("TASK 4a - SON pass one")
+    from task1_apriori import frequent_pairs
+
+    candidates = set()
+    for chunk in chunks:
+        if not chunk:
+            continue
+        # A smaller chunk gets the same fraction of the global threshold.
+        scaled_support = math.ceil(support * len(chunk) / total_baskets)
+        candidates.update(frequent_pairs(chunk, scaled_support))
+    return candidates
 
 
 def son_pass_two(baskets, candidates, support):
@@ -46,7 +57,15 @@ def son_pass_two(baskets, candidates, support):
 
     TASK 4b
     """
-    raise NotImplementedError("TASK 4b - SON pass two")
+    candidate_pairs = {tuple(sorted(pair)) for pair in candidates}
+    counts = Counter()
+    for basket in baskets:
+        # Count a pair only if pass one proposed it.
+        for pair in combinations(sorted(basket), 2):
+            if pair in candidate_pairs:
+                counts[pair] += 1
+    return {frozenset(pair): count for pair, count in counts.items()
+            if count >= support}
 
 
 # ------------------------------------------------------------------- harness

@@ -20,6 +20,7 @@ is not an optimisation.
 """
 from collections import Counter
 from itertools import combinations
+from array import array
 
 
 class PlainApriori:
@@ -75,8 +76,43 @@ class YourAlgorithm:
         observation.md asks about it
     """
 
-    def __init__(self, support):
-        raise NotImplementedError("write your algorithm")
+    def __init__(self, support, bucket_count=262_144):
+        self.support = support
+        self.bucket_count = bucket_count
+        self.peak_counters = 0
 
     def run(self, baskets):
-        raise NotImplementedError
+        self.peak_counters = 0
+        single_counts = Counter()
+        buckets = array("I", [0]) * self.bucket_count
+
+        # Pass one counts items and hashes every observed pair into a bucket.
+        for basket in baskets:
+            items = sorted(basket)
+            single_counts.update(items)
+            for pair in combinations(items, 2):
+                buckets[hash(pair) % self.bucket_count] += 1
+
+        frequent = {item for item, count in single_counts.items()
+                    if count >= self.support}
+        bitmap = bytearray((self.bucket_count + 7) // 8)
+        for index, count in enumerate(buckets):
+            if count >= self.support:
+                bitmap[index // 8] |= 1 << (index % 8)
+        del buckets  # The bitmap replaces the bucket counts before pass two.
+
+        pair_counts = Counter()
+        for basket in baskets:
+            items = sorted(basket & frequent)
+            for pair in combinations(items, 2):
+                index = hash(pair) % self.bucket_count
+                if bitmap[index // 8] & (1 << (index % 8)):
+                    pair_counts[pair] += 1
+            self.peak_counters = max(self.peak_counters, len(pair_counts))
+
+        result = {frozenset(pair): count for pair, count in pair_counts.items()
+                  if count >= self.support}
+        # The working counts and final answers coexist while result is built.
+        self.peak_counters = max(self.peak_counters,
+                                 len(pair_counts) + len(result))
+        return result
