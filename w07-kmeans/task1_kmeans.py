@@ -22,7 +22,9 @@ BLOBS = [(0.0, 0.0), (0.2, 0.1), (0.1, 0.2),
 
 def euclidean(a, b):
     """Distance between two points of any dimension."""
-    raise NotImplementedError("distance")
+    if len(a) != len(b):
+        raise ValueError("points must have the same dimension")
+    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
 
 
 def assign(points, centroids):
@@ -30,7 +32,8 @@ def assign(points, centroids):
 
     Ties go to the lower index, so that everybody's answer is the same.
     """
-    raise NotImplementedError("assignment step")
+    return [min(range(len(centroids)), key=lambda j: euclidean(point, centroids[j]))
+            for point in points]
 
 
 def update(points, labels, k):
@@ -39,7 +42,20 @@ def update(points, labels, k):
     An empty cluster has no mean. Decide what you do - and say so, because the
     choice changes the result and there is more than one defensible answer.
     """
-    raise NotImplementedError("update step")
+    groups = [[] for _ in range(k)]
+    for point, label in zip(points, labels):
+        groups[label].append(point)
+
+    centroids = [tuple(sum(values) / len(group) for values in zip(*group))
+                 if group else None for group in groups]
+    occupied = [centroid for centroid in centroids if centroid is not None]
+    for j, centroid in enumerate(centroids):
+        if centroid is None:
+            # Restart an empty cluster at the point least covered so far.
+            replacement = max(points, key=lambda p: min(euclidean(p, c) for c in occupied))
+            centroids[j] = replacement
+            occupied.append(replacement)
+    return centroids
 
 
 def kmeans(points, k, init="random", seed=246, max_iter=100):
@@ -56,12 +72,40 @@ def kmeans(points, k, init="random", seed=246, max_iter=100):
 
     Set `kmeans.iterations` to how many passes you used.
     """
-    raise NotImplementedError("k-means")
+    if not 1 <= k <= len(points):
+        raise ValueError("k must be between 1 and the number of points")
+    rng = random.Random(seed)
+    if init == "random":
+        centroids = list(rng.sample(points, k))
+    elif init == "++":
+        centroids = [rng.choice(points)]
+        while len(centroids) < k:
+            # Far-away points get more weight in k-means++.
+            weights = [min(euclidean(point, c) ** 2 for c in centroids)
+                       for point in points]
+            if sum(weights) == 0:
+                centroids.append(rng.choice(points))
+            else:
+                centroids.append(rng.choices(points, weights=weights, k=1)[0])
+    else:
+        raise ValueError("init must be 'random' or '++'")
+
+    labels = [None] * len(points)
+    kmeans.iterations = 0
+    for turn in range(1, max_iter + 1):
+        new_labels = assign(points, centroids)
+        centroids = update(points, new_labels, k)
+        kmeans.iterations = turn
+        if new_labels == labels:
+            break
+        labels = new_labels
+    return labels, centroids, sse_of(points, labels, centroids)
 
 
 def sse_of(points, labels, centroids):
     """Sum of squared distances from each point to its assigned centroid."""
-    raise NotImplementedError("sse")
+    return sum(sum((x - y) ** 2 for x, y in zip(point, centroids[label]))
+               for point, label in zip(points, labels))
 
 
 # ------------------------------------------------------------------- harness

@@ -1,0 +1,9 @@
+  20,000 points in 20 dimensions, k = 12
+
+  baseline   distances   10,320,000   sse  10,737,882.94    43 iters    55.51s
+  yours      distances    1,150,998   sse  10,737,882.94    43 iters     8.81s
+
+   ok    sse matches to 0.0000%
+   distance computations cut by 88.8%  (1,150,998 from 10,320,000)
+
+   -> strong

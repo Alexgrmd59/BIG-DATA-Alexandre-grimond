@@ -81,7 +81,80 @@ class YourKMeans:
     """
 
     def __init__(self, k, max_iter=50):
-        raise NotImplementedError("write your k-means")
+        self.k = k
+        self.max_iter = max_iter
+        self.iterations = 0
+        self.first_iteration_calls = 0
+        self.lower_skips = 0
+        self.separation_skips = 0
 
     def run(self, points, initial_centroids, distance):
-        raise NotImplementedError
+        centroids = list(initial_centroids)
+        labels = [None] * len(points)
+        upper = [float("inf")] * len(points)
+        lower = [0.0] * len(points)
+        self.iterations = 0
+        self.lower_skips = self.separation_skips = 0
+
+        for turn in range(1, self.max_iter + 1):
+            # Half the centroid gap rules out all other centroids at once.
+            separation = [float("inf")] * self.k
+            if turn > 1:
+                for a in range(self.k):
+                    for b in range(a + 1, self.k):
+                        half_gap = distance(centroids[a], centroids[b]) / 2
+                        separation[a] = min(separation[a], half_gap)
+                        separation[b] = min(separation[b], half_gap)
+
+            changed = False
+            for i, point in enumerate(points):
+                if turn == 1:
+                    values = [distance(point, c) for c in centroids]
+                else:
+                    current = labels[i]
+                    if upper[i] < lower[i] - 1e-12:
+                        self.lower_skips += 1
+                        continue
+                    if upper[i] < separation[current] - 1e-12:
+                        self.separation_skips += 1
+                        continue
+
+                    # Tighten the upper bound before a full comparison.
+                    exact = distance(point, centroids[current])
+                    upper[i] = exact
+                    if exact < lower[i] - 1e-12:
+                        self.lower_skips += 1
+                        continue
+                    if exact < separation[current] - 1e-12:
+                        self.separation_skips += 1
+                        continue
+                    values = [exact if j == current else distance(point, c)
+                              for j, c in enumerate(centroids)]
+
+                best, best_distance = 0, values[0]
+                for j, value in enumerate(values[1:], 1):
+                    if value < best_distance - 1e-12:
+                        best, best_distance = j, value
+                upper[i] = values[best]
+                lower[i] = min((value for j, value in enumerate(values) if j != best),
+                               default=float("inf"))
+                if labels[i] != best:
+                    labels[i] = best
+                    changed = True
+
+            new_centroids = _means(points, labels, self.k, centroids)
+            moves = [distance(old, new) for old, new in zip(centroids, new_centroids)]
+            centroids = new_centroids
+            self.iterations = turn
+            if turn == 1:
+                self.first_iteration_calls = len(points) * self.k + self.k
+            if not changed:
+                break
+
+            # Triangle inequality keeps both bounds valid after centroid moves.
+            largest_move = max(moves)
+            for i, label in enumerate(labels):
+                upper[i] += moves[label]
+                lower[i] = max(0.0, lower[i] - largest_move)
+
+        return labels, centroids
